@@ -3,7 +3,7 @@ from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
 # --- НАСТРОЙКИ ---
-TOKEN = "ВАШ_ТОКЕН_ЗДЕСЬ"  # замени на свой токен
+TOKEN = "8541616922:AAGw9wnbHGLe2yBlvxurAp2Vbh7q7T-K6Jk"  # замени на свой токен
 DB_PATH = "baza.db"
 
 # --- ФУНКЦИИ БАЗЫ ДАННЫХ ---
@@ -74,3 +74,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
