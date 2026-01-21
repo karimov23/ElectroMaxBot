@@ -1,22 +1,23 @@
 import sqlite3
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
+# -------------------- НАСТРОЙКИ --------------------
 TOKEN = "8541616922:AAGw9wnbHGLe2yBlvxurAp2Vbh7q7T-K6Jk"
 DB_PATH = "baza.db"
-ALLOWED_USERS = [1979851980, 7691730481, 987654321]  # три разрешённых пользователя
+ALLOWED_USERS = [1979851980, 7691730481, 987654321]  # Разрешённые пользователи
 
-# Проверка доступа
+# -------------------- ПРОВЕРКА ДОСТУПА --------------------
 def restricted(func):
-    def wrapper(update: Update, context: CallbackContext):
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         if user_id not in ALLOWED_USERS:
-            update.message.reply_text("Доступ запрещён.")
+            await update.message.reply_text("Доступ запрещён.")
             return
-        return func(update, context)
+        await func(update, context)
     return wrapper
 
-# Работа с базой
+# -------------------- БАЗА ДАННЫХ --------------------
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -43,48 +44,47 @@ def list_products():
     conn.close()
     return items
 
-# Команды бота
+# -------------------- КОМАНДЫ БОТА --------------------
 @restricted
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Привет! Я бот магазина ElectroMax2.\nИспользуй /add название цена количество, /list для списка товаров.")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Привет! Я бот магазина ElectroMax.\nИспользуй /add название цена количество, /list для списка товаров."
+    )
 
 @restricted
-def add(update: Update, context: CallbackContext):
+async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         args = context.args
         if len(args) != 3:
-            update.message.reply_text("Используй: /add название цена количество")
+            await update.message.reply_text("Используй: /add название цена количество")
             return
         name = args[0]
         price = float(args[1])
         quantity = int(args[2])
         add_product(name, price, quantity)
-        update.message.reply_text(f"Товар {name} добавлен: {quantity} шт по цене {price}.")
+        await update.message.reply_text(f"Товар {name} добавлен: {quantity} шт по цене {price}.")
     except Exception as e:
-        update.message.reply_text(f"Ошибка: {e}")
+        await update.message.reply_text(f"Ошибка: {e}")
 
 @restricted
-def list_items(update: Update, context: CallbackContext):
+async def list_items(update: Update, context: ContextTypes.DEFAULT_TYPE):
     items = list_products()
     if not items:
-        update.message.reply_text("Список товаров пуст.")
+        await update.message.reply_text("Список товаров пуст.")
         return
     msg = "\n".join([f"{name} — {quantity} шт — цена {price}" for name, price, quantity in items])
-    update.message.reply_text(msg)
+    await update.message.reply_text(msg)
 
-# Запуск бота
+# -------------------- ЗАПУСК --------------------
 def main():
     init_db()
-    updater = Updater(TOKEN)
-    dp = updater.dispatcher
+    app = ApplicationBuilder().token(TOKEN).build()
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("add", add))
-    dp.add_handler(CommandHandler("list", list_items))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("add", add))
+    app.add_handler(CommandHandler("list", list_items))
 
-    updater.start_polling()
-    updater.idle()
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
-
