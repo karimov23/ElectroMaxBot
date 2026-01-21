@@ -1,120 +1,76 @@
-# Electro.py - рабочий бот магазина ElectroMax
-# Telegram бот с базой товаров, добавлением и списком товаров
-
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import sqlite3
-from datetime import datetime
+from telegram import Update, Bot
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-# ====== Настройки ======
-TOKEN = "8541616922:AAGw9wnbHGLe2yBlvxurAp2Vbh7q7T-K6Jk"  # Твой токен
-AUTHORIZED_USERS = [1979851980]  # Твой Telegram ID
-DB_PATH = "baza.db"  # Файл базы данных
+# --- НАСТРОЙКИ ---
+TOKEN = "ВАШ_ТОКЕН_ЗДЕСЬ"  # замени на свой токен
+DB_PATH = "baza.db"
 
-# ====== Создание базы (если нет) ======
-conn = sqlite3.connect(DB_PATH)
-cursor = conn.cursor()
-
-# Таблица товаров
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    purchase_price REAL,
-    sale_price REAL,
-    margin REAL,
-    quantity INTEGER
-)
-""")
-
-# Таблица прихода
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS income (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER,
-    quantity INTEGER,
-    purchase_price REAL,
-    date TEXT
-)
-""")
-
-# Таблица продаж
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS sales (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER,
-    quantity INTEGER,
-    sale_price REAL,
-    date TEXT
-)
-""")
-
-conn.commit()
-conn.close()
-
-# ====== Команды бота ======
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in AUTHORIZED_USERS:
-        await update.message.reply_text("Доступ запрещён")
-        return
-    await update.message.reply_text("Привет! Бот ElectroMax запущен.")
-
-# Добавление товара: /addproduct Название Закупка Продажа Кол-во
-async def add_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in AUTHORIZED_USERS:
-        await update.message.reply_text("Доступ запрещён")
-        return
-    try:
-        name = context.args[0]
-        purchase = float(context.args[1])
-        sale = float(context.args[2])
-        quantity = int(context.args[3])
-        margin = round((sale - purchase) / purchase * 100, 2)
-
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO products (name, purchase_price, sale_price, margin, quantity)
-            VALUES (?, ?, ?, ?, ?)
-        """, (name, purchase, sale, margin, quantity))
-        conn.commit()
-        conn.close()
-
-        await update.message.reply_text(f"Товар {name} добавлен! Маржа: {margin}%")
-    except:
-        await update.message.reply_text("Ошибка! Используй: /addproduct Название Закупка Продажа Кол-во")
-
-# Список товаров и общий капитал: /listproducts
-async def list_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in AUTHORIZED_USERS:
-        await update.message.reply_text("Доступ запрещён")
-        return
-
+# --- ФУНКЦИИ БАЗЫ ДАННЫХ ---
+def init_db():
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT name, purchase_price, quantity FROM products")
-    rows = cursor.fetchall()
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS products
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  name TEXT,
+                  price REAL,
+                  quantity INTEGER)''')
+    conn.commit()
     conn.close()
 
-    if not rows:
-        await update.message.reply_text("Товаров нет!")
+def add_product(name, price, quantity):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT INTO products (name, price, quantity) VALUES (?, ?, ?)", (name, price, quantity))
+    conn.commit()
+    conn.close()
+
+def list_products():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT name, price, quantity FROM products")
+    items = c.fetchall()
+    conn.close()
+    return items
+
+# --- ФУНКЦИИ БОТА ---
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Привет! Я бот магазина ElectroMax. Используй /add, /list для работы.")
+
+def add(update: Update, context: CallbackContext):
+    try:
+        args = context.args
+        if len(args) != 3:
+            update.message.reply_text("Используй: /add название цена количество")
+            return
+        name = args[0]
+        price = float(args[1])
+        quantity = int(args[2])
+        add_product(name, price, quantity)
+        update.message.reply_text(f"Товар {name} добавлен!")
+    except Exception as e:
+        update.message.reply_text(f"Ошибка: {e}")
+
+def list_items(update: Update, context: CallbackContext):
+    items = list_products()
+    if not items:
+        update.message.reply_text("Список товаров пуст.")
         return
+    msg = "\n".join([f"{name} — {quantity} шт — цена {price}" for name, price, quantity in items])
+    update.message.reply_text(msg)
 
-    total_capital = 0
-    msg = "Список товаров:\n"
-    for r in rows:
-        name, purchase, qty = r
-        total = purchase * qty
-        total_capital += total
-        msg += f"{name}: {qty} шт. × {purchase} сом = {total} сом\n"
-    msg += f"\nОбщий капитал вложен в товары: {total_capital} сом"
-    await update.message.reply_text(msg)
+# --- ЗАПУСК БОТА ---
+def main():
+    init_db()
+    updater = Updater(TOKEN)
+    dp = updater.dispatcher
 
-# ====== Настройка и запуск бота ======
-app = ApplicationBuilder().token(TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("addproduct", add_product))
-app.add_handler(CommandHandler("listproducts", list_products))
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("add", add))
+    dp.add_handler(CommandHandler("list", list_items))
 
-print("Бот запущен...")
-app.run_polling()
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
