@@ -5,7 +5,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 # -------------------- НАСТРОЙКИ --------------------
 TOKEN = "8541616922:AAGw9wnbHGLe2yBlvxurAp2Vbh7q7T-K6Jk"  # твой токен
 DB_PATH = "baza.db"
-ALLOWED_USERS = [1979851980, 123456789, 987654321]  # ID разрешённых пользователей
+ALLOWED_USERS = [1979851980, 7691730481, 987654321]  # ID разрешённых пользователей
 
 # -------------------- ПРОВЕРКА ДОСТУПА --------------------
 def restricted(func):
@@ -88,3 +88,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
