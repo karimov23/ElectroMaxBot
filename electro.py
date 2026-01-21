@@ -48,7 +48,7 @@ def list_products():
 @restricted
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Привет! Я бот магазина ElectroMax.\nИспользуй /add название цена количество, /list для списка товаров."
+        "Привет! Я бот магазина ElectroMax2.\nИспользуй /add название цена количество, /list для списка товаров."
     )
 
 @restricted
@@ -88,3 +88,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
