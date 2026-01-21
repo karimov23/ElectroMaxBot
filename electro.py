@@ -46,7 +46,7 @@ def list_products():
 # Команды бота
 @restricted
 def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Привет! Я бот магазина ElectroMax.\nИспользуй /add название цена количество, /list для списка товаров.")
+    update.message.reply_text("Привет! Я бот магазина ElectroMax2.\nИспользуй /add название цена количество, /list для списка товаров.")
 
 @restricted
 def add(update: Update, context: CallbackContext):
@@ -87,3 +87,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
